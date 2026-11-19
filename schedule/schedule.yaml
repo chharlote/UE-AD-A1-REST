@@ -1,0 +1,351 @@
+openapi: 3.0.3
+
+info:
+  title: Schedule Service API
+  description: API for consulting and managing movie schedules.
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:3202
+    description: Local development server
+
+tags:
+  - name: schedule
+    description: Operations for browsing schedules
+  - name: administration
+    description: Operations requiring administrator rights
+  - name: documentation
+    description: API documentation
+
+paths:
+  /:
+    get:
+      tags: [documentation]
+      summary: Service home page
+      responses:
+        "200":
+          description: HTML welcome message
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /openapi.yaml:
+    get:
+      tags: [documentation]
+      summary: Retrieve the OpenAPI specification
+      responses:
+        "200":
+          description: OpenAPI specification
+          content:
+            application/yaml:
+              schema:
+                type: string
+
+  /json:
+    get:
+      tags: [schedule]
+      summary: Retrieve all schedules
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Schedule"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /timesbydate:
+    get:
+      tags: [schedule]
+      summary: Retrieve the schedule for a specific date
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          required: true
+          description: Date of the schedule in YYYYMMDD format.
+          schema:
+            type: string
+            example: "20151130"
+      responses:
+        "200":
+          description: Schedule found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No schedule found for this date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /times/:
+    post:
+      tags: [administration]
+      summary: Add a schedule
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleInput"
+      responses:
+        "201":
+          description: Schedule added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, schedule]
+                properties:
+                  message:
+                    type: string
+                    example: Schedule added
+                  schedule:
+                    $ref: "#/components/schemas/Schedule"
+        "400":
+          description: Invalid payload or missing field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: One or more movies do not exist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MissingMoviesError"
+        "409":
+          description: A schedule already exists for this date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /times/{date}/movies:
+    post:
+      tags: [administration]
+      summary: Add movies to an existing schedule
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Date"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoviesInput"
+      responses:
+        "200":
+          description: Movies added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, schedule]
+                properties:
+                  message:
+                    type: string
+                    example: Films ajoutés avec succès
+                  schedule:
+                    $ref: "#/components/schemas/Schedule"
+        "400":
+          description: Movies were not provided
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Date or movie not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Movie already scheduled for this date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MissingMoviesError"
+
+  /times/{date}/{movie_id}:
+    delete:
+      tags: [administration]
+      summary: Remove a movie from a schedule
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Date"
+        - $ref: "#/components/parameters/MovieId"
+      responses:
+        "200":
+          description: Movie removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Movie deleted successfully
+                  movie_id_deleted:
+                    type: string
+                    format: uuid
+                  new_schedule:
+                    $ref: "#/components/schemas/Schedule"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Date or movie not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /times/{date}:
+    delete:
+      tags: [administration]
+      summary: Delete a schedule
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Date"
+      responses:
+        "200":
+          description: Schedule deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Schedule deleted successfully
+                  date:
+                    type: string
+                    example: "20151130"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Schedule not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Date:
+      name: date
+      in: path
+      required: true
+      description: Date of the schedule in YYYYMMDD format.
+      schema:
+        type: string
+        example: "20151130"
+
+    MovieId:
+      name: movie_id
+      in: path
+      required: true
+      description: Unique identifier of the movie.
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Missing, invalid, expired, or insufficient authorization token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Schedule:
+      type: object
+      required:
+        - date
+        - movies
+      properties:
+        date:
+          type: string
+          description: Date of the schedule in YYYYMMDD format.
+          example: "20151130"
+        movies:
+          type: array
+          description: UUIDs of the movies scheduled for this date.
+          items:
+            type: string
+            format: uuid
+          example:
+            - 720d006c-3a57-4b6a-b18f-9b713b073f3c
+
+    ScheduleInput:
+      type: object
+      required:
+        - date
+        - movies
+      properties:
+        date:
+          type: string
+          example: "20261212"
+        movies:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    MoviesInput:
+      type: object
+      required:
+        - movies
+      properties:
+        movies:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Schedule not found
+
+    MissingMoviesError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: The following movies are not found
+        movies:
+          type: array
+          items:
+            type: string
+            format: uuid
