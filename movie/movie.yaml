@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: Movie Service API
-  description: API for browsing, adding, and rating movies.
-  version: "1.0.0"
+  description: API for consulting and managing the movie catalogue.
+  version: "2.0.0"
   contact:
     name: Helene Coullon
     url: https://helene-coullon.fr/
@@ -12,18 +12,18 @@ servers:
     description: Local development server
 
 tags:
-- name: admin
-  description: Secured Admin-only calls
-- name: dev
-  description: Operations available to regular developers
+  - name: catalogue
+    description: Operations for browsing movies
+  - name: administration
+    description: Operations requiring administrator rights
+  - name: documentation
+    description: API documentation
 
 paths:
   /:
     get:
-      tags:
-        - dev
+      tags: [documentation]
       summary: Service home page
-      description: Returns an HTML welcome message.
       responses:
         "200":
           description: HTML welcome message
@@ -31,14 +31,51 @@ paths:
             text/html:
               schema:
                 type: string
-                example: "<h1 style='color:blue'>Welcome to the Movie service!</h1>"
+              example: "<h1 style='color:blue'>Welcome to the Movie service!</h1>"
 
-  /json:
+  /openapi.yaml:
     get:
-      tags:
-        - dev
-      summary: Retrieve the full list of movies
-      description: Returns the list of all available movies.
+      tags: [documentation]
+      summary: Retrieve the OpenAPI specification
+      description: Returns this document so it can be loaded by an OpenAPI client or viewer.
+      responses:
+        "200":
+          description: OpenAPI specification
+          content:
+            application/yaml:
+              schema:
+                type: string
+        "404":
+          description: Specification file is not available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /movies:
+    get:
+      tags: [catalogue]
+      summary: List movies
+      description: Returns all movies, optionally filtered by director, title, and minimum rating.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: director
+          in: query
+          description: Case-insensitive partial match on the director's name.
+          schema:
+            type: string
+        - name: title
+          in: query
+          description: Case-insensitive partial match on the movie title.
+          schema:
+            type: string
+        - name: min_rating
+          in: query
+          description: Only return movies whose rating is greater than or equal to this value.
+          schema:
+            type: number
+            format: float
       responses:
         "200":
           description: List of movies
@@ -48,14 +85,58 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Movie"
+        "400":
+          description: Invalid minimum rating
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags: [administration]
+      summary: Add a movie
+      description: Creates a movie and generates its UUID.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MovieInput"
+      responses:
+        "201":
+          description: Movie added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, movie]
+                properties:
+                  message:
+                    type: string
+                    example: Movie added
+                  movie:
+                    $ref: "#/components/schemas/Movie"
+        "400":
+          description: Invalid JSON or missing required field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /movies/{movieid}:
+    parameters:
+      - $ref: "#/components/parameters/MovieId"
     get:
-      tags:
-        - dev
-      summary: Retrieve a movie by its ID
-      parameters:
-        - $ref: "#/components/parameters/MovieId"
+      tags: [catalogue]
+      summary: Retrieve a movie by ID
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Movie found
@@ -63,83 +144,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Movie"
-        "500":
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
           description: Movie ID not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
 
-    post:
-      tags:
-        - admin
-      summary: Add a new movie
-      description: Adds a movie with the given ID, if it doesn't already exist.
-      parameters:
-        - $ref: "#/components/parameters/MovieId"
+    put:
+      tags: [administration]
+      summary: Update a movie
+      description: Replaces the editable fields of an existing movie.
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Movie"
-      responses:
-        "200":
-          description: Movie added successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: movie added
-        "500":
-          description: Movie ID already exists
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /moviesbytitle:
-    get:
-      tags:
-        - dev
-      summary: Retrieve a movie by its title
-      parameters:
-        - name: title
-          in: query
-          required: true
-          description: Exact title of the movie to search for
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Movie found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Movie"
-        "500":
-          description: Movie title not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /movies/{movieid}/{rate}:
-    put:
-      tags:
-        - admin
-      summary: Update a movie's rating
-      parameters:
-        - $ref: "#/components/parameters/MovieId"
-        - name: rate
-          in: path
-          required: true
-          description: New rating to assign to the movie
-          schema:
-            type: string
+              $ref: "#/components/schemas/MovieInput"
       responses:
         "200":
           description: Movie updated successfully
@@ -147,7 +172,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Movie"
-        "500":
+        "400":
+          description: Invalid JSON or missing required field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Movie ID not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags: [administration]
+      summary: Delete a movie
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Movie deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Movie"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
           description: Movie ID not found
           content:
             application/json:
@@ -155,45 +209,74 @@ paths:
                 $ref: "#/components/schemas/Error"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   parameters:
     MovieId:
       name: movieid
       in: path
       required: true
-      description: Unique identifier of the movie
+      description: Unique identifier of the movie.
       schema:
         type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Missing, invalid, expired, or insufficient authorization token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
 
   schemas:
     Movie:
       type: object
       description: Representation of a movie.
+      required: [id, title, director, rating]
       properties:
         id:
           type: string
           format: uuid
-          description: Unique identifier of the movie
-          example: "720d006c-3a57-4b6a-b18f-9b713b073f3c"
+          description: Unique identifier of the movie.
+          example: 720d006c-3a57-4b6a-b18f-9b713b073f3c
         title:
           type: string
-          description: Movie title
-          example: "The Good Dinosaur"
+          description: Movie title.
+          example: The Good Dinosaur
+        director:
+          type: string
+          description: Movie director.
+          example: Peter Sohn
         rating:
           type: number
           format: float
-          description: Rating assigned to the movie
+          description: Movie rating.
           example: 7.4
+
+    MovieInput:
+      type: object
+      required: [title, director, rating]
+      properties:
+        title:
+          type: string
+          example: The Good Dinosaur
         director:
           type: string
-          description: Movie director
-          example: "Peter Sohn"
-      required:
-        - id
-        - title
+          example: Peter Sohn
+        rating:
+          type: number
+          format: float
+          example: 7.4
 
     Error:
       type: object
+      required: [error]
       properties:
         error:
           type: string
-          example: "Movie ID not found"
+          example: Movie ID not found
