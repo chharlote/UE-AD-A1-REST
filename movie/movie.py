@@ -1,8 +1,9 @@
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response, send_from_directory
 import json
 import sys
 from jwt import token_required
 import uuid
+from flask_swagger_ui import get_swaggerui_blueprint
 
 from werkzeug.exceptions import NotFound
 
@@ -10,7 +11,16 @@ app = Flask(__name__)
 
 PORT = 3200
 HOST = '0.0.0.0'
+SWAGGER_URL = "/docs"
+API_URL = "/openapi.yaml"
 
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={"app_name": "Movie Service API"}
+)
+
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 try:
     with open('{}/databases/movies.json'.format("."), 'r') as jsf:
@@ -26,6 +36,7 @@ def write(movies):
         full['movies']=movies
         json.dump(full, f)
 
+
 # root message
 @app.route("/", methods=['GET'])
 def home():
@@ -37,6 +48,11 @@ def home():
 # def get_movies():
 #     res = make_response(jsonify(movies), 200)
 #     return res
+
+
+@app.route("/openapi.yaml", methods=["GET"])
+def openapi_spec():
+    return send_from_directory(".", "movie.yaml", mimetype="application/yaml")
 
 @app.route("/movies", methods=['GET'])
 @token_required()

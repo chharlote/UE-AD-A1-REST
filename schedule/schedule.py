@@ -1,14 +1,27 @@
-from flask import Flask, render_template, request, jsonify, make_response
+from flask import Flask, render_template, request, jsonify, make_response, send_from_directory
 import json
 import sys
 import requests
 from werkzeug.exceptions import NotFound
 from jwt import token_required
+from flask_swagger_ui import get_swaggerui_blueprint
 
 app = Flask(__name__)
 
 PORT = 3202
 HOST = '0.0.0.0'
+
+
+SWAGGER_URL = "/docs"
+API_URL = "/openapi.yaml"
+
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={"app_name": "Schedule Service API"}
+)
+
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 try:
 
@@ -46,6 +59,11 @@ def verify_movie(movie_id: str) -> tuple[bool, int, str]:
 @app.route("/", methods=['GET'])
 def home():
    return "<h1 style='color:blue'>Welcome to the Showtime service!</h1>"
+
+@app.route("/openapi.yaml", methods=["GET"])
+def openapi_spec():
+    return send_from_directory(".", "schedule.yaml", mimetype="application/yaml")
+
 
 @app.route("/json", methods=['GET'])
 @token_required()

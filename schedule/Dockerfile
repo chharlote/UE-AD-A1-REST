@@ -3,7 +3,7 @@ FROM python:alpine
 WORKDIR /app
 
 # copy the required files and directories in the workdir
-COPY --parents ./schedule/./schedule.py ./schedule/./databases ./
+COPY --parents ./schedule/./schedule.py ./schedule/./schedule.yaml ./schedule/./databases ./
 COPY ./utils/jwt.py  ./requirements.txt ./
 
 # install the Python requirements
