@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, make_response
 import json
 import sys
-from utils.jwt import token_required
+from jwt import token_required
 import uuid
 
 from werkzeug.exceptions import NotFound

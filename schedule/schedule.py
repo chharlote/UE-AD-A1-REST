@@ -3,7 +3,7 @@ import json
 import sys
 import requests
 from werkzeug.exceptions import NotFound
-from utils.jwt import token_required
+from jwt import token_required
 
 app = Flask(__name__)
 

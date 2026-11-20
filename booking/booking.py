@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, make_response, g
 import requests
 import json
-from utils.jwt import token_required
+from jwt import token_required
 
 app = Flask(__name__)
 
