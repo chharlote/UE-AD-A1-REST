@@ -3,7 +3,7 @@ FROM python:alpine
 WORKDIR /app
 
 # copy the required files and directories in the workdir
-COPY --parents ./movie/./movie.py ./movie/./databases ./
+COPY --parents ./movie/./movie.py ./movie/./movie.yaml ./movie/./databases ./
 COPY ./utils/jwt.py  ./requirements.txt ./
 
 # install the Python requirements
