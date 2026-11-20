@@ -1,6 +1,9 @@
 from flask import Flask, request, jsonify, make_response
 import json
 import sys
+from utils.jwt import token_required
+import uuid
+
 from werkzeug.exceptions import NotFound
 
 app = Flask(__name__)
@@ -28,12 +31,50 @@ def write(movies):
 def home():
     return make_response("<h1 style='color:blue'>Welcome to the Movie service!</h1>",200)
 
-@app.route("/json", methods=['GET'])
-def get_json():
-    res = make_response(jsonify(movies), 200)
-    return res
+
+# @app.route("/movies", methods=['GET'])
+# @token_required()
+# def get_movies():
+#     res = make_response(jsonify(movies), 200)
+#     return res
+
+@app.route("/movies", methods=['GET'])
+@token_required()
+def get_movies():
+    filtered_movies = movies
+
+    # Director filter
+    director = request.args.get("director")
+    if director:
+        filtered_movies = [
+            m for m in filtered_movies
+            if director.lower() in m["director"].lower()
+        ]
+
+    # title filter
+    title = request.args.get("title")
+    if title:
+        filtered_movies = [
+            m for m in filtered_movies
+            if title.lower() in m["title"].lower()
+        ]
+
+    # min_rating filter
+    min_rating = request.args.get("min_rating")
+    if min_rating:
+        try:
+            min_val = float(min_rating)
+            filtered_movies = [
+                m for m in filtered_movies
+                if float(m["rating"]) >= min_val
+            ]
+        except ValueError:
+            return make_response(jsonify({"error": "min_rating must be a number"}), 400)
+
+    return make_response(jsonify(filtered_movies), 200)
 
 @app.route("/movies/<movieid>", methods=['GET'])
+@token_required()
 def get_movie_byid(movieid):
     for movie in movies:
         if str(movie["id"]) == str(movieid):
@@ -41,45 +82,54 @@ def get_movie_byid(movieid):
             return res
     return make_response(jsonify({"error": "Movie ID not found"}), 404)
 
-@app.route("/moviesbytitle", methods=['GET'])
-def get_movie_bytitle():
-    json = ""
-    if request.args:
-        req = request.args
-        for movie in movies:
-            if str(movie["title"]) == str(req["title"]):
-                json = movie
 
-    if not json:
-        return make_response(jsonify({"error": "Movie title not found"}), 404)
-    else:
-        res = make_response(jsonify(json),200)
-    return res
-
-
-@app.route("/movies/<movieid>", methods=['POST'])
-def add_movie(movieid):
+@app.route("/movies", methods=['POST'])
+@token_required(admin_req=True)
+def add_movie():
     req = request.get_json()
     if not req:
         return make_response(jsonify({"error": "Invalid or missing JSON payload"}), 400)
 
+    if not req.get("title"):
+        return make_response(jsonify({"error": "Missing title"}), 400)
+    if not req.get("director"):
+        return make_response(jsonify({"error": "Missing director"}), 400)
+    if not req.get("rating"):
+        return make_response(jsonify({"error": "Missing rating"}), 400)
+
+    new_movie_id = str(uuid.uuid4())
     for movie in movies:
-        if str(movie["id"]) == str(movieid):
+        if str(movie["id"]) == str(new_movie_id):
             print(movie["id"])
-            print(movieid)
+            print(new_movie_id)
             return make_response(jsonify({"error":"movie ID already exists"}),400)
 
-    movies.append(req)
+    new_movie = {
+        "id": new_movie_id,
+        "title": req["title"],
+        "director": req["director"],
+        "rating": req.get("rating", 0)
+    }
+
+    movies.append(new_movie)
     write(movies)
-    return make_response(jsonify({"message": "Movie added", "movie": req}), 201)
+
+    return make_response(jsonify({"message": "Movie added", "movie": new_movie}), 201)
 
 
 @app.route("/movies/<movieid>", methods=['PUT'])
+@token_required(admin_req=True)
 def update_movie_rating(movieid):
     req_data = request.get_json()
 
     if not req_data:
-        return make_response(jsonify({"error": "Aucune donnée JSON fournie"}), 400)
+        return make_response(jsonify({"error": "Invalid or missing JSON payload"}), 400)
+    if not req_data.get("rating"):
+        return make_response(jsonify({"error": "Missing rating"}), 400)
+    if not req_data.get("title"):
+        return make_response(jsonify({"error": "Missing title"}), 400)
+    if not req_data.get("director"):
+        return make_response(jsonify({"error": "Missing director"}), 400)
 
     for movie in movies:
         if str(movie["id"]) == str(movieid):
@@ -93,6 +143,7 @@ def update_movie_rating(movieid):
 
 
 @app.route("/movies/<movieid>", methods=['DELETE'])
+@token_required(admin_req=True)
 def del_movie(movieid):
     for movie in movies:
         if str(movie["id"]) == str(movieid):

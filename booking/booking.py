@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, make_response, g
 import requests
 import json
-from jwt import token_required
+from utils.jwt import token_required
 
 app = Flask(__name__)
 
@@ -47,7 +47,6 @@ def verify_schedule(date: str, movie_id: str) -> tuple[bool, int, str]:
 @app.route("/", methods=['GET'])
 def home():
     return "<h1 style='color:blue'>Welcome to the Booking service!</h1>"
-
 
 @app.route("/bookings", methods=['GET'])
 @token_required()
