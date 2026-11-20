@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, make_response, send_from_directory
 import json
 import sys
-from utils.jwt import token_required
+from jwt import token_required
 import uuid
 from flask_swagger_ui import get_swaggerui_blueprint
 
