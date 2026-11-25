@@ -4,6 +4,10 @@ info:
   title: Schedule Service API
   description: API for consulting and managing movie schedules.
   version: "1.0.0"
+  contact:
+    name: Helene Coullon
+    url: https://helene-coullon.fr/
+    email: helene.coullon@imt-atlantique.fr
 
 servers:
   - url: http://localhost:3202

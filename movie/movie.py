@@ -43,13 +43,6 @@ def home():
     return make_response("<h1 style='color:blue'>Welcome to the Movie service!</h1>",200)
 
 
-# @app.route("/movies", methods=['GET'])
-# @token_required()
-# def get_movies():
-#     res = make_response(jsonify(movies), 200)
-#     return res
-
-
 @app.route("/openapi.yaml", methods=["GET"])
 def openapi_spec():
     return send_from_directory(".", "movie.yaml", mimetype="application/yaml")
