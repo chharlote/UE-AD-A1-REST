@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify, make_response, g
 import requests
 import json
-from jwt import token_required
+from ..utils.jwt import token_required
+from ..utils import sigterm  # sigterm handler
 
 app = Flask(__name__)
 
@@ -11,12 +12,12 @@ HOST = '0.0.0.0'
 MOVIE_SERVICE_URL = "http://127.0.0.1:3200"
 SCHEDULE_SERVICE_URL = "http://127.0.0.1:3202"
 
-with open('{}/databases/bookings.json'.format("."), "r") as jsf:
+with open('./src/booking/databases/bookings.json', "r") as jsf:
     bookings = json.load(jsf)["bookings"]
 
 
 def save():
-    with open('{}/databases/bookings.json'.format("."), 'w') as f:
+    with open('./src/booking/databases/bookings.json', 'w') as f:
         json.dump({"bookings": bookings}, f)
 
 

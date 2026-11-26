@@ -3,11 +3,10 @@ FROM python:alpine
 WORKDIR /app
 
 # copy the required files and directories in the workdir
-COPY --parents ./schedule/./schedule.py ./schedule/./schedule.yaml ./schedule/./databases ./
-COPY ./utils/jwt.py  ./requirements.txt ./
+COPY --parents ./src/schedule ./src/utils ./requirements.txt ./
 
 # install the Python requirements
 RUN pip install -r requirements.txt
 
 # start schedule.py when the container is started
-CMD python ./schedule.py
+CMD python -m src.schedule.schedule

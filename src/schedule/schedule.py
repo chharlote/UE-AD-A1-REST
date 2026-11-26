@@ -3,7 +3,8 @@ import json
 import sys
 import requests
 from werkzeug.exceptions import NotFound
-from jwt import token_required
+from ..utils.jwt import token_required
+from ..utils import sigterm  # sigterm handler
 from flask_swagger_ui import get_swaggerui_blueprint
 
 app = Flask(__name__)
@@ -25,14 +26,14 @@ app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 try:
 
-    with open('{}/databases/times.json'.format("."), "r") as jsf:
+    with open('./src/schedule/databases/times.json', "r") as jsf:
         times = json.load(jsf)["schedule"]
 except FileNotFoundError:
     print("Error: times.py file not found.")
     sys.exit(1)
 
 def write(times):
-    with open('{}/databases/times.json'.format("."), 'w') as f:
+    with open('./src/schedule/databases/times.json', 'w') as f:
         json.dump({"schedule": times}, f)
 
 
