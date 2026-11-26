@@ -1,14 +1,15 @@
 from flask import Flask, render_template, request, jsonify, make_response, g
 import json
 from werkzeug.exceptions import NotFound
-from jwt import token_required, create_jwt
+from ..utils.jwt import token_required, create_jwt
+from ..utils import sigterm  # sigterm handler
 
 app = Flask(__name__)
 
 PORT = 3203
 HOST = '0.0.0.0'
 
-with open('{}/databases/users.json'.format("."), "r") as jsf:
+with open('./src/user/databases/users.json', "r") as jsf:
     users: list = json.load(jsf)["users"]
 
 
@@ -18,7 +19,7 @@ def home():
 
 
 def save():
-    with open('{}/databases/users.json'.format("."), 'w') as f:
+    with open('./src/user/databases/users.json', 'w') as f:
         json.dump({"users": users}, f)
 
 

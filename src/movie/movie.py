@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify, make_response, send_from_directory
 import json
 import sys
-from jwt import token_required
+from ..utils.jwt import token_required
+from ..utils import sigterm  # sigterm handler
 import uuid
 from flask_swagger_ui import get_swaggerui_blueprint
 
@@ -23,15 +24,14 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 try:
-    with open('{}/databases/movies.json'.format("."), 'r') as jsf:
+    with open('./src/movie/databases/movies.json', 'r') as jsf:
         movies = json.load(jsf)["movies"]
-        print(movies)
 except FileNotFoundError:
     print("Error: movies.json file not found")
     sys.exit(1)
 
 def write(movies):
-    with open('{}/databases/movies.json'.format("."), 'w') as f:
+    with open('./src/movie/databases/movies.json', 'w') as f:
         full = {}
         full['movies']=movies
         json.dump(full, f)
