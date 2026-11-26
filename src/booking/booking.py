@@ -1,20 +1,32 @@
-from flask import Flask, request, jsonify, make_response, g
+from flask import Flask, request, jsonify, make_response, g, send_from_directory
 import requests
 import json
 from ..utils.jwt import token_required
 from ..utils import sigterm  # sigterm handler
+from flask_swagger_ui import get_swaggerui_blueprint
+
 
 app = Flask(__name__)
 
 PORT = 3201
 HOST = '0.0.0.0'
 
+SWAGGER_URL = "/docs"
+API_URL = "/openapi.yaml"
+
 MOVIE_SERVICE_URL = "http://127.0.0.1:3200"
 SCHEDULE_SERVICE_URL = "http://127.0.0.1:3202"
 
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={"app_name": "Booking Service API"}
+)
+
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+
 with open('./src/booking/databases/bookings.json', "r") as jsf:
     bookings = json.load(jsf)["bookings"]
-
 
 def save():
     with open('./src/booking/databases/bookings.json', 'w') as f:
@@ -48,6 +60,12 @@ def verify_schedule(date: str, movie_id: str) -> tuple[bool, int, str]:
 @app.route("/", methods=['GET'])
 def home():
     return "<h1 style='color:blue'>Welcome to the Booking service!</h1>"
+
+@app.route("/openapi.yaml", methods=["GET"])
+def openapi_spec():
+    return send_from_directory(".", "booking.yaml", mimetype="application/yaml")
+
+
 
 @app.route("/bookings", methods=['GET'])
 @token_required()

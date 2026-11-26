@@ -70,14 +70,19 @@ Les 4 conteneurs sont exposés sur les ports `3200`, `3201`, `3202` et `3203`.
 
 Une fois les services démarrés, vous pouvez accéder directement aux interfaces suivantes dans votre navigateur :
 
-* **Swagger UI — Movie Service :** [http://localhost:3200/docs](http://localhost:3200/docs)
-* **Swagger UI — Schedule Service :** [http://localhost:3202/docs](http://localhost:3202/docs) 
-
-
 * **Accueil Movie :** [http://localhost:3200/](http://localhost:3200/)
-* **Accueil Booking :** [http://localhost:3201/](http://localhost:3201/)
-* **Accueil Schedule :** [http://localhost:3202/](http://localhost:3202/)
+* **Swagger UI — Movie Service :** [http://localhost:3200/docs](http://localhost:3200/docs)
+---
 * **Accueil User :** [http://localhost:3203/](http://localhost:3203/)
+* **Swagger UI — User Service :** [http://localhost:3203/docs](http://localhost:3203/docs)
+---
+* **Accueil Schedule :** [http://localhost:3202/](http://localhost:3202/)
+* **Swagger UI — Schedule Service :** [http://localhost:3202/docs](http://localhost:3202/docs)
+---
+* **Accueil Booking :** [http://localhost:3201/](http://localhost:3201/)
+* **Swagger UI — Booking Service :** [http://localhost:3201/docs](http://localhost:3201/docs)
+
+
 
 ---
 
