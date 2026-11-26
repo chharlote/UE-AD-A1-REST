@@ -1,0 +1,269 @@
+openapi: 3.0.3
+
+info:
+  title: Booking Service API
+  description: API for consulting and managing user movie bookings.
+  version: "1.0.0"
+  contact:
+    name: Helene Coullon
+    url: https://helene-coullon.fr/
+    email: helene.coullon@imt-atlantique.fr
+
+servers:
+  - url: http://localhost:3201
+    description: Local development server
+
+tags:
+  - name: bookings
+    description: Operations for consulting and managing bookings
+  - name: administration
+    description: Operations requiring administrator rights
+  - name: documentation
+    description: API documentation
+
+paths:
+  /:
+    get:
+      tags: [documentation]
+      summary: Service home page
+      responses:
+        "200":
+          description: HTML welcome message
+          content:
+            text/html:
+              schema:
+                type: string
+              example: "<h1 style='color:blue'>Welcome to the Booking service!</h1>"
+
+  /openapi.yaml:
+    get:
+      tags: [documentation]
+      summary: Retrieve the OpenAPI specification
+      description: Returns this document so it can be loaded by an OpenAPI client or viewer.
+      responses:
+        "200":
+          description: OpenAPI specification
+          content:
+            application/yaml:
+              schema:
+                type: string
+        "404":
+          description: Specification file is not available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /bookings:
+    get:
+      tags: [bookings]
+      summary: Retrieve bookings
+      description: Returns all user bookings if the requester is an administrator, or a single-element list containing the authenticated user's bookings.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of user bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserBooking"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags: [bookings]
+      summary: Add a booking
+      description: Books a scheduled movie on a given date for the authenticated user after verifying the movie and schedule services.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "201":
+          description: Booking added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: Booking added
+        "304":
+          description: Movie is already booked on this date for the authenticated user
+        "400":
+          description: Invalid JSON payload or missing required field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Movie not found, no schedule found for this date, or movie not scheduled on this date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Movie service or Schedule service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags: [bookings]
+      summary: Delete a booking
+      description: Removes a booked movie on a given date for the authenticated user.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "200":
+          description: Booking deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: Booking deleted
+        "400":
+          description: Invalid JSON payload or missing required field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Booking or user not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /bookings/{user_id}:
+    parameters:
+      - $ref: "#/components/parameters/UserId"
+    delete:
+      tags: [administration]
+      summary: Delete all bookings for a user
+      description: Removes the entire booking record of the specified user. Requires administrator rights.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: All bookings deleted for the specified user
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: All bookings deleted for user chris_rivers
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No bookings found for this user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      description: Unique identifier of the user.
+      schema:
+        type: string
+        example: chris_rivers
+
+  responses:
+    Unauthorized:
+      description: Missing, invalid, expired, or insufficient authorization token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    BookingDate:
+      type: object
+      required: [date, movies]
+      properties:
+        date:
+          type: string
+          description: Date of the screening in YYYYMMDD format.
+          example: "20151130"
+        movies:
+          type: array
+          description: UUIDs of the movies booked on this date.
+          items:
+            type: string
+            format: uuid
+          example:
+            - 720d006c-3a57-4b6a-b18f-9b713b073f3c
+
+    UserBooking:
+      type: object
+      required: [userid, dates]
+      properties:
+        userid:
+          type: string
+          description: Unique identifier of the user.
+          example: chris_rivers
+        dates:
+          type: array
+          description: List of dates and booked movies for this user.
+          items:
+            $ref: "#/components/schemas/BookingDate"
+
+    BookingInput:
+      type: object
+      required: [movie_id, date]
+      properties:
+        movie_id:
+          type: string
+          format: uuid
+          description: Unique identifier of the movie to book or cancel.
+          example: 720d006c-3a57-4b6a-b18f-9b713b073f3c
+        date:
+          type: string
+          description: Date of the screening in YYYYMMDD format.
+          example: "20151130"
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: Movie is not scheduled on this date
